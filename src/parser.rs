@@ -118,7 +118,6 @@ impl Parser {
 
     fn parse_below_thousand(&mut self) -> Result<Num, ParseError> {
         let mut total = 0;
-        let mut found_something = false;
 
         // "a" functions like "one" only when it is the first token (after an optional minus),
         // and only if the token after is a scale word (like "million", or "hundred").
@@ -127,35 +126,34 @@ impl Parser {
                 self.next();
                 self.next();
                 total = 100;
-                found_something = true;
             }
             (Some(Token::A), Some(Token::Scale(_))) => {
                 // `parse_number` will deal with it
                 self.next();
                 return Ok(1);
             }
+            // no "a" and no word that could possibly start a chunk,
+            // in other words:
+            // the user could have entered a lone "million" and hoped it'd work (it doesn't)
+            _ if !self.starts_chunk() => {
+                return match self.peek() {
+                    Some(token) => Err(ParseError::UnexpectedToken(token)),
+                    None => Err(ParseError::UnexpectedEnd),
+                };
+            }
+            (Some(Token::Unit(n)), Some(Token::Hundred)) => {
+                // we skip twice since we already found two tokens ahead that match what we wanted
+                self.next();
+                self.next();
+                total = n * 100;
+            }
             _ => {}
-        }
-
-        if let (Some(Token::Unit(n)), Some(Token::Hundred)) = (self.peek(), self.peek_at(1)) {
-            // we skip twice since we already found two tokens ahead that match what we wanted
-            self.next();
-            self.next();
-            total = n * 100;
-            found_something = true;
         }
 
         if self.starts_chunk() {
             total += self.parse_below_hundred()?;
-            found_something = true;
         }
 
-        if !found_something {
-            return match self.peek() {
-                Some(token) => Err(ParseError::UnexpectedToken(token)),
-                None => Err(ParseError::UnexpectedEnd),
-            };
-        }
         Ok(total)
     }
 
