@@ -1,0 +1,66 @@
+I'm guessing that for this I would need a parser (I learned how to use recursive descent parsing in my last project and that's the only thing I know now, lol)
+
+so, for this, we would need to parse something such as:
+
+one hundred and one
+
+or
+
+two thousand one hundred and five
+
+after the lexer has processed all the arguments... the first way I'd try to parse this is separate each individual token into categories of orders of magnitude: units, tens, hundreds, thousands, etc...
+
+the left operand is the unit factor and then the right one is the one that tells you what order of magnitude it belongs to. so, "five thousand" would parse as 5 * 1000, english puts these numbers in pairs, grammatically. the "one hundred" after it is an addition. we can parse it as 1 * 100 and then add it to the earlier number. 5 * 1000 + 1 * 100 gives us 5100. "and five" ("and" won't be necessary for the parser, the lexer could drop it) is a simple addition, so + 5, giving us 5105.
+
+this would be right... if we didn't have numbers like:
+
+three hundred thousand
+
+now, it's no longer an addition. it's a multiplication of 3 factors. "three hundred thousand" would parse to 3 * 100 * 1000. this then breaks the earlier reasoning I had. this is because grammatically, the "three hundred" and the "thousand" are separate. think of it like (3 * 100) * 1000. in this specific case, the parantheses make no difference. but then look at:
+
+one hundred and six thousand
+
+that's (1 * 100 + 6) * thousand. not (1 * 100) + (6 * 1000).
+
+I'd have to establish a couple of rules.
+
+1. the first argument HAS to be a single number (like "eight" or "fifty-five"). it can't be a scale word like "million" or "hundred".
+2. all scale words except "hundred" can't repeat twice in a sentence. "hundred" is special since it's a scale word that can be applied to units before those units apply to the scale word directly.
+3. scale words go in descent order. meaning, larger to smaller. you can't have "one million and four billion", instead you would say "four billion and one million". except "hundred" that was the exception for the earlier rule, this ensures that we can't have arbitrary order for scale words (litereally english grammar).
+
+for this, we'd need a parser that separates the sentence in chunks, like we saw earlier with the parenthesis. and have a hieararchy of bindings. thousands, millions, etc bind loosest, they're the larger part of the number. optional "x hundred and y" where x and y are units bind tighter than numbers, since they're a separate chunk that gets resolved before multiplying it with any scale word. and finally, we have the units, "x" is anything between "one" and "nine" and "y" could be anything between "one" up to "ninety-nine".
+
+(wtf am I even saying bro... just know that this is a mental exercise for ME. and if you don't understand what I'm writing, that's to be expected. after all, I'm just writing down my thoughts, anything that comes to mind, for clarity).
+
+some pseudo code for this would look like
+
+```
+fn parse_sentence(sentence: list<token>) -> number or error { imagine clever code here }
+
+fn parse_hundred(sentence: list<token>) -> number or error { todo }
+
+fn parse_below_hundred(sentence: list<token>) -> number or error {
+    // unit numbers like "five" or "seven" lex directly to the digit they represent.
+    // this also covers numbers like fifteen or seventeen, they are directly converted to 15 and 17.
+    // prefixes like "seventy" or "thirty" get a different treatment. "thirty-eight" lexes to 30 and 8, the parser adds them later
+
+    // a simple rule, the tens' prefix must be first and can't repeat. e.g. "twenty-twenty" and "five eighty" makes no sense. so that returns an error.
+
+    let first = sentence.next();
+
+    match first {
+        first is unit => first.value
+        first is teen => first.value
+        first is ten  => {
+            var possible_unit = 0;
+            if sentence.peek() is unit {
+                possible_unit = parse_unit(sentence);
+            }
+            first.value + possible_unit
+        }
+        _ => error
+    }
+
+    first
+}
+```
