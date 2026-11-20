@@ -14,12 +14,12 @@ fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
 
     if args.is_empty() {
-        repl();
-    } else {
-        let input = args.join(" ");
-        if !run_line(&input) {
+        if let Err(e) = repl() {
+            eprintln!("error: {e}");
             return ExitCode::FAILURE;
         }
+    } else if !run_line(&args.join(" ")) {
+        return ExitCode::FAILURE;
     }
 
     ExitCode::SUCCESS
@@ -46,14 +46,21 @@ fn run_line(line: &str) -> bool {
     }
 }
 
-fn repl() {
+fn repl() -> io::Result<()> {
+    let mut line = String::new();
     loop {
         print!(">>> ");
-        io::stdout().flush().unwrap();
+        io::stdout().flush()?;
 
-        let mut line = String::new();
-        if io::stdin().read_line(&mut line).unwrap() == 0 {
-            break; // this is EOF
+        line.clear();
+        match io::stdin().read_line(&mut line) {
+            Ok(0) => break Ok(()), // this is EOF
+            Ok(_) => {}
+            Err(e) if e.kind() == io::ErrorKind::InvalidData => {
+                eprintln!("failed to read input.\n{e}");
+                continue;
+            }
+            Err(e) => return Err(e),
         }
 
         if line.trim().is_empty() {

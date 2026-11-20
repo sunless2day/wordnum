@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::token::{Num, ScaleWord, TEENS, TENS, Token, UNITS};
+use crate::token::{MinusWord, Num, ScaleWord, TEENS, TENS, Token, UNITS};
 
 #[derive(Debug)]
 pub enum LexError {
@@ -56,7 +56,8 @@ fn word_to_token(word: &str) -> Option<Token> {
         "zero" => Some(Token::Zero),
         "a" => Some(Token::A),
         "hundred" => Some(Token::Hundred),
-        "minus" | "negative" => Some(Token::Minus),
+        "minus" => Some(Token::Minus(MinusWord::Minus)),
+        "negative" => Some(Token::Minus(MinusWord::Negative)),
         _ => None,
     }
 }

@@ -17,7 +17,14 @@ pub enum Token {
     Ten(Num),
     Hundred,
     Scale(ScaleWord),
+    // remembers which word was used so errors can echo it back
+    Minus(MinusWord),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MinusWord {
     Minus,
+    Negative,
 }
 
 // insane macro hack as you can see
@@ -91,6 +98,15 @@ impl Display for ScaleWord {
     }
 }
 
+impl Display for MinusWord {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Self::Minus => write!(f, "minus"),
+            Self::Negative => write!(f, "negative"),
+        }
+    }
+}
+
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
@@ -101,7 +117,7 @@ impl Display for Token {
             Self::Ten(n) => write!(f, "{}", TENS[(*n / 10 - 2) as usize]),
             Self::Hundred => write!(f, "hundred"),
             Self::Scale(scale) => write!(f, "{scale}"),
-            Self::Minus => write!(f, "minus"),
+            Self::Minus(word) => write!(f, "{word}"),
         }
     }
 }

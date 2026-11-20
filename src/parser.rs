@@ -58,7 +58,7 @@ impl Parser {
     }
 
     pub fn parse(mut self) -> Result<Num, ParseError> {
-        let negative = if self.peek() == Some(Token::Minus) {
+        let negative = if let Some(Token::Minus(_)) = self.peek() {
             self.next();
             true
         } else {
@@ -289,6 +289,22 @@ mod tests {
                 parse(input).is_err(),
                 "{input:?} should fail, got {:?}",
                 parse(input)
+            );
+        }
+    }
+
+    #[test]
+    fn errors_print_the_right_minus_word_used() {
+        let cases = [
+            ("five minus three", "unexpected 'minus'"),
+            ("five negative three", "unexpected 'negative'"),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                parse(input).unwrap_err().to_string(),
+                expected,
+                "parsing {input:?}"
             );
         }
     }
